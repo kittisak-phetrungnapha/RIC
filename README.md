@@ -1,0 +1,2 @@
+# RIC
+Really Instant Chat
