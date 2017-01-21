@@ -40,6 +40,21 @@ final class ChatViewController: JSQMessagesViewController {
     private lazy var messageRef: FIRDatabaseReference = self.channelRef!.child("messages")
     private var newMessageRefHandle: FIRDatabaseHandle?
     
+    private lazy var userIsTypingRef: FIRDatabaseReference =
+        self.channelRef!.child("typingIndicator").child(self.senderId)
+    private var localTyping = false
+    var isTyping: Bool {
+        get {
+            return localTyping
+        }
+        set {
+            localTyping = newValue
+            userIsTypingRef.setValue(newValue)
+        }
+    }
+    private lazy var usersTypingQuery: FIRDatabaseQuery =
+        self.channelRef!.child("typingIndicator").queryOrderedByValue().queryEqual(toValue: true)
+    
     // MARK: View Lifecycle
     
     override func viewDidLoad() {
@@ -51,6 +66,11 @@ final class ChatViewController: JSQMessagesViewController {
         collectionView!.collectionViewLayout.outgoingAvatarViewSize = .zero
         
         observeMessages()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        observeTyping()
     }
     
     // MARK: Collection view data source (and related) methods
@@ -99,6 +119,7 @@ final class ChatViewController: JSQMessagesViewController {
         itemRef.setValue(messageItem)
         JSQSystemSoundPlayer.jsq_playMessageSentSound()
         finishSendingMessage()
+        isTyping = false
     }
     
     private func observeMessages() {
@@ -119,6 +140,21 @@ final class ChatViewController: JSQMessagesViewController {
         })
     }
     
+    private func observeTyping() {
+        userIsTypingRef.onDisconnectRemoveValue()
+
+        usersTypingQuery.observe(.value) { (data: FIRDataSnapshot) in
+            // You're the only one typing, don't show the indicator
+            if data.childrenCount == 1 && self.isTyping {
+                return
+            }
+            
+            // Are there others typing?
+            self.showTypingIndicator = data.childrenCount > 0
+            self.scrollToBottom(animated: true)
+        }
+    }
+    
     // MARK: UI and User Interaction
     private func setupOutgoingBubble() -> JSQMessagesBubbleImage {
         let bubbleImageFactory = JSQMessagesBubbleImageFactory()
@@ -137,5 +173,9 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     // MARK: UITextViewDelegate methods
+    override func textViewDidChange(_ textView: UITextView) {
+        super.textViewDidChange(textView)
+        isTyping = textView.text != ""
+    }
     
 }
