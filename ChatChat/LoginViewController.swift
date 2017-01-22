@@ -34,7 +34,7 @@ class LoginViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        fbLoginButton.delegate = self
+        //        fbLoginButton.delegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -49,18 +49,18 @@ class LoginViewController: UIViewController {
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
     }
     
-    //    @IBAction func loginDidTouch(_ sender: AnyObject) {
-    //        if nameField?.text != "" {
-    //            FIRAuth.auth()?.signInAnonymously(completion: { (user, error) in
-    //                if let err = error {
-//                        print(err.localizedDescription)
-//                        return
-    //                }
-    //
-    //                self.performSegue(withIdentifier: "LoginToChat", sender: nil)
-    //            })
-    //        }
-    //    }
+    @IBAction func loginDidTouch(_ sender: AnyObject) {
+        if nameField?.text != "" {
+            FIRAuth.auth()?.signInAnonymously(completion: { (user, error) in
+                if let err = error {
+                    print(err.localizedDescription)
+                    return
+                }
+                
+                self.performSegue(withIdentifier: "LoginToChat", sender: nil)
+            })
+        }
+    }
     
     // MARK: - Notifications
     
