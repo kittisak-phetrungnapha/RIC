@@ -36,7 +36,7 @@
                                     </mask>
                                 </variation>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JIn-ew-tdp">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JIn-ew-tdp" customClass="FBSDKLoginButton">
                                 <rect key="frame" x="78" y="569" width="219" height="50"/>
                                 <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
@@ -52,9 +52,6 @@
                                         <color key="value" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
-                                <connections>
-                                    <action selector="loginDidTouch:" destination="BYZ-38-t0r" eventType="touchUpInside" id="npm-8d-Oiz"/>
-                                </connections>
                             </button>
                             <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Enter your name" textAlignment="center" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="5Ud-se-jh6">
                                 <rect key="frame" x="78" y="503" width="219" height="50"/>
@@ -77,6 +74,7 @@
                     </view>
                     <connections>
                         <outlet property="bottomLayoutGuideConstraint" destination="MVT-E5-fDK" id="bNU-sI-B85"/>
+                        <outlet property="fbLoginButton" destination="JIn-ew-tdp" id="tcV-tS-Bf9"/>
                         <outlet property="nameField" destination="5Ud-se-jh6" id="VUy-ik-PQf"/>
                         <segue destination="8CN-Ua-xvG" kind="presentation" identifier="LoginToChat" id="C1q-pb-YWz"/>
                     </connections>

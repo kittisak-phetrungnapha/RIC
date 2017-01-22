@@ -22,13 +22,20 @@
 
 import UIKit
 import FirebaseAuth
+import FBSDKLoginKit
 
 class LoginViewController: UIViewController {
     
     @IBOutlet weak var nameField: UITextField!
     @IBOutlet weak var bottomLayoutGuideConstraint: NSLayoutConstraint!
+    @IBOutlet weak var fbLoginButton: FBSDKLoginButton!
     
     // MARK: View Lifecycle
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        fbLoginButton.delegate = self
+    }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -42,18 +49,18 @@ class LoginViewController: UIViewController {
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
     }
     
-    @IBAction func loginDidTouch(_ sender: AnyObject) {
-        if nameField?.text != "" {
-            FIRAuth.auth()?.signInAnonymously(completion: { (user, error) in
-                if let err = error {
-                    print(err.localizedDescription)
-                    return
-                }
-                
-                self.performSegue(withIdentifier: "LoginToChat", sender: nil)
-            })
-        }
-    }
+    //    @IBAction func loginDidTouch(_ sender: AnyObject) {
+    //        if nameField?.text != "" {
+    //            FIRAuth.auth()?.signInAnonymously(completion: { (user, error) in
+    //                if let err = error {
+//                        print(err.localizedDescription)
+//                        return
+    //                }
+    //
+    //                self.performSegue(withIdentifier: "LoginToChat", sender: nil)
+    //            })
+    //        }
+    //    }
     
     // MARK: - Notifications
     
@@ -74,6 +81,39 @@ class LoginViewController: UIViewController {
         let channelVc = navVc.viewControllers.first as! ChannelListViewController
         
         channelVc.senderDisplayName = nameField?.text
+    }
+    
+}
+
+// MARK: - FBSDKLoginButtonDelegate
+
+extension LoginViewController: FBSDKLoginButtonDelegate {
+    
+    func loginButton(_ loginButton: FBSDKLoginButton!, didCompleteWith result: FBSDKLoginManagerLoginResult!, error: Error!) {
+        if let error = error {
+            print(error.localizedDescription)
+            return
+        }
+        guard FBSDKAccessToken.current() != nil else { return }
+        
+        let credential = FIRFacebookAuthProvider.credential(withAccessToken: FBSDKAccessToken.current().tokenString)
+        FIRAuth.auth()?.signIn(with: credential) { (user, error) in
+            if let error = error {
+                print(error.localizedDescription)
+                return
+            }
+            
+            self.performSegue(withIdentifier: "LoginToChat", sender: nil)
+        }
+    }
+    
+    func loginButtonDidLogOut(_ loginButton: FBSDKLoginButton!) {
+        let firebaseAuth = FIRAuth.auth()
+        do {
+            try firebaseAuth?.signOut()
+        } catch let signOutError as NSError {
+            print ("Error signing out: %@", signOutError.localizedDescription)
+        }
     }
     
 }

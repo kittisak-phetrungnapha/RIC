@@ -8,5 +8,7 @@ target 'ChatChat' do
   pod 'Firebase/Auth'
   pod 'Firebase/Database'
   pod 'JSQMessagesViewController'
+  pod 'FBSDKCoreKit'
+  pod 'FBSDKLoginKit'
 
 end
