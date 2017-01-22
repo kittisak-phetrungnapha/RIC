@@ -337,8 +337,9 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         
         asset?.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
             guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
+            guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
             
-            let path = "\(FIRAuth.auth()?.currentUser?.uid)/\(Int(Date.timeIntervalSinceReferenceDate * 1000))/\(photoReferenceUrl.lastPathComponent)"
+            let path = "\(uid)/\(Int(Date.timeIntervalSinceReferenceDate * 1000))/\(photoReferenceUrl.lastPathComponent)"
             
             self.storageRef.child(path).putFile(imageFileURL, metadata: nil) { (metadata, error) in
                 if let error = error {
