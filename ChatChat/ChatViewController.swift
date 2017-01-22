@@ -281,13 +281,28 @@ final class ChatViewController: JSQMessagesViewController {
     override func didPressAccessoryButton(_ sender: UIButton) {
         let picker = UIImagePickerController()
         picker.delegate = self
-        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) {
-            picker.sourceType = UIImagePickerControllerSourceType.camera
-        } else {
-            picker.sourceType = UIImagePickerControllerSourceType.photoLibrary
+        if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) { // real device
+            let alert = UIAlertController.init(title: "Select Image Source", message: nil, preferredStyle: .actionSheet)
+            let cameraAction = UIAlertAction.init(title: "Camera", style: .default, handler: { action in
+                picker.sourceType = .camera
+                self.present(picker, animated: true, completion:nil)
+            })
+            let photoLibraryAction = UIAlertAction.init(title: "Photo Library", style: .default, handler: { action in
+                picker.sourceType = .photoLibrary
+                self.present(picker, animated: true, completion:nil)
+            })
+            let cancelAction = UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil)
+            
+            alert.addAction(cameraAction)
+            alert.addAction(photoLibraryAction)
+            alert.addAction(cancelAction)
+            
+            self.present(alert, animated: true, completion: nil)
+            
+        } else { // simulator
+            picker.sourceType = .photoLibrary
+            present(picker, animated: true, completion:nil)
         }
-        
-        present(picker, animated: true, completion:nil)
     }
     
     // MARK: UITextViewDelegate methods
@@ -331,11 +346,35 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         
         // Handle picking a Photo from the Photo Library
         let assets = PHAsset.fetchAssets(withALAssetURLs: [photoReferenceUrl], options: nil)
-        let asset = assets.firstObject
-        
+        guard let asset = assets.firstObject else { return }
         guard let key = sendPhotoMessage() else { return }
         
-        asset?.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
+        /*
+        let manager = PHImageManager.default()
+        manager.requestImage(for: asset, targetSize: CGSize(width: 640.0, height: 960.0), contentMode: .aspectFit, options: nil, resultHandler: { (result, info) -> Void in
+            
+            guard let result = result else { return }
+            guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
+            
+            let path = "\(uid)/\(Int(Date.timeIntervalSinceReferenceDate * 1000)).jpg"
+            guard let data = UIImageJPEGRepresentation(result, 1.0) else { return }
+            
+            let metadata = FIRStorageMetadata()
+            metadata.contentType = "image/jpeg"
+            
+            self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
+                if let error = error {
+                    print("Error uploading photo: \(error.localizedDescription)")
+                    return
+                }
+                guard let metadataPath = metadata?.path else { return }
+                
+                self.setImageURL(self.storageRef.child(metadataPath).description, forPhotoMessageWithKey: key)
+            })
+        })
+         */
+        
+        asset.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
             guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
             guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
             
