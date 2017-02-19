@@ -35,16 +35,17 @@ final class ChatViewController: JSQMessagesViewController {
     
     lazy var outgoingBubbleImageView: JSQMessagesBubbleImage = self.setupOutgoingBubble()
     lazy var incomingBubbleImageView: JSQMessagesBubbleImage = self.setupIncomingBubble()
-    private lazy var messageRef: FIRDatabaseReference = FIRDatabase.database().reference().child("messages")
-    private var newMessageRefHandle: FIRDatabaseHandle?
     
+    private lazy var messageRef: FIRDatabaseReference = FIRDatabase.database().reference().child("messages")
     lazy var storageRef: FIRStorageReference = FIRStorage.storage().reference(forURL: "gs://fir-devday.appspot.com")
-    private let imageURLNotSetKey = "NOTSET"
-    private var photoMessageMap = [String: JSQPhotoMediaItem]()
+    
+    private var newMessageRefHandle: FIRDatabaseHandle?
     private var updatedMessageRefHandle: FIRDatabaseHandle?
     
-    private let username = FIRAuth.auth()?.currentUser?.displayName ?? "Kittisak Phetrungnapha"
-    private let avatar = FIRAuth.auth()?.currentUser?.photoURL?.absoluteString ?? "https://lh5.googleusercontent.com/-YpXDnaI_YM0/AAAAAAAAAAI/AAAAAAAAB30/rvs3MJ_YPOE/s96-c/photo.jpg"
+    private let imageURLNotSetKey = "NOTSET"
+    private var photoMessageMap = [String: JSQPhotoMediaItem]()
+    
+    var avatarString: String!
     
     // MARK: View Lifecycle
     
@@ -53,8 +54,6 @@ final class ChatViewController: JSQMessagesViewController {
         
         self.title = "Firebase"
         setupLogOutButton()
-        
-        self.senderId = FIRAuth.auth()?.currentUser?.uid
         
         observeMessages()
     }
@@ -75,11 +74,10 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     func signOut() {
-        let firebaseAuth = FIRAuth.auth()
         do {
-            try firebaseAuth?.signOut()
+            try FIRAuth.auth()?.signOut()
         } catch let signOutError as NSError {
-            print ("Error Firebase signing out: %@", signOutError)
+            print ("Error Firebase signing out: \(signOutError)")
         }
         
         GIDSignIn.sharedInstance().signOut()
@@ -100,7 +98,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAt indexPath: IndexPath!) -> JSQMessageBubbleImageDataSource! {
         let message = messages[indexPath.item]
-        if message.senderId == username {
+        if message.senderId == self.senderId {
             return outgoingBubbleImageView
         } else {
             return incomingBubbleImageView
@@ -112,20 +110,22 @@ final class ChatViewController: JSQMessagesViewController {
         return JSQMessagesAvatarImageFactory.avatarImage(with: UIImage(named: "football.png"), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
     }
     
-    override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
-        let message = messages[indexPath.item]
-        return NSAttributedString(string: message.senderDisplayName)
-    }
-    
-    override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellBottomLabelAt indexPath: IndexPath!) -> NSAttributedString! {
-        return nil
-    }
+    /*
+     override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
+     let message = messages[indexPath.item]
+     return NSAttributedString(string: message.senderDisplayName)
+     }
+     
+     override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellBottomLabelAt indexPath: IndexPath!) -> NSAttributedString! {
+     return nil
+     }
+     */
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = super.collectionView(collectionView, cellForItemAt: indexPath) as! JSQMessagesCollectionViewCell
         let message = messages[indexPath.item]
         
-        if message.senderId == username {
+        if message.senderId == self.senderId {
             cell.textView?.textColor = UIColor.white
         } else {
             cell.textView?.textColor = UIColor.black
@@ -137,11 +137,12 @@ final class ChatViewController: JSQMessagesViewController {
     override func didPressSend(_ button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: Date!) {
         let itemRef = messageRef.childByAutoId()
         let messageItem = [
-            "avatar": avatar,
+            "avatar": avatarString,
             "data": text,
             "type": "text",
-            "username": username
-            ]
+            "username": senderDisplayName,
+            "senderId": senderId
+        ]
         
         itemRef.setValue(messageItem)
         JSQSystemSoundPlayer.jsq_playMessageSentSound()
@@ -156,30 +157,31 @@ final class ChatViewController: JSQMessagesViewController {
         newMessageRefHandle = messageQuery.observe(.childAdded, with: { (snapshot) -> Void in
             let messageData = snapshot.value as! Dictionary<String, String>
             
-            if let type = messageData["type"] as String!, type == "text", let username = messageData["username"] as String!, let text = messageData["data"] as String!, text.characters.count > 0 {
-                self.addMessage(withId: username, name: "Top", text: text)
+            // text
+            if let type = messageData["type"] as String!,
+                type == "text",
+                let id = messageData["senderId"] as String!,
+                let displayName = messageData["username"] as String!,
+                let data = messageData["data"] as String!,
+                data.characters.count > 0 {
+                
+                self.addMessage(withId: id, name: displayName, text: data)
                 self.finishReceivingMessage()
             }
                 
-            else if let type = messageData["type"] as String!, type == "image",
-                let photoURL = messageData["data"] as String!,
-                let username = messageData["username"] as String! {
+                // image
+            else if let type = messageData["type"] as String!,
+                type == "image",
+                let id = messageData["senderId"] as String!,
+                let photoURL = messageData["data"] as String! {
                 
-                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: false) {
-                    self.addPhotoMessage(withId: username, key: snapshot.key, mediaItem: mediaItem)
+                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: self.senderId == id) {
+                    self.addPhotoMessage(withId: id, key: snapshot.key, mediaItem: mediaItem)
                     
-                    if photoURL.hasPrefix("gs://") {
+                    if photoURL.hasPrefix("gs://") || photoURL.hasPrefix("http://") || photoURL.hasPrefix("https://") {
                         self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
                     }
                 }
-                
-//                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: id == self.senderId) {
-//                    self.addPhotoMessage(withId: id, key: snapshot.key, mediaItem: mediaItem)
-//                    
-//                    if photoURL.hasPrefix("gs://") {
-//                        self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
-//                    }
-//                }
             }
                 
             else {
@@ -195,7 +197,10 @@ final class ChatViewController: JSQMessagesViewController {
             let key = snapshot.key
             let messageData = snapshot.value as! Dictionary<String, String>
             
-            if let photoURL = messageData["data"] as String! {
+            if let type = messageData["type"] as String!,
+                type == "image",
+                let photoURL = messageData["data"] as String! {
+                
                 // The photo has been updated.
                 if let mediaItem = self.photoMessageMap[key] {
                     self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: key)
@@ -220,6 +225,7 @@ final class ChatViewController: JSQMessagesViewController {
                 }
                 
                 guard let data = data else { return }
+                
                 if (metadata?.contentType == "image/gif") {
                     mediaItem.image = UIImage.gifWithData(data)
                 } else {
@@ -228,6 +234,7 @@ final class ChatViewController: JSQMessagesViewController {
                 self.collectionView.reloadData()
                 
                 guard let key = key else { return }
+                
                 self.photoMessageMap.removeValue(forKey: key)
             })
         }
@@ -266,9 +273,12 @@ final class ChatViewController: JSQMessagesViewController {
         let itemRef = messageRef.childByAutoId()
         
         let messageItem = [
-            "photoURL": imageURLNotSetKey,
-            "senderId": senderId!,
-            ]
+            "avatar": avatarString,
+            "data": imageURLNotSetKey,
+            "type": "image",
+            "username": self.senderDisplayName,
+            "senderId": self.senderId
+        ]
         
         itemRef.setValue(messageItem)
         JSQSystemSoundPlayer.jsq_playMessageSentSound()
@@ -285,6 +295,7 @@ final class ChatViewController: JSQMessagesViewController {
     override func didPressAccessoryButton(_ sender: UIButton) {
         let picker = UIImagePickerController()
         picker.delegate = self
+        
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) { // real device
             let alert = UIAlertController.init(title: "Select Image Source", message: nil, preferredStyle: .actionSheet)
             let cameraAction = UIAlertAction.init(title: "Camera", style: .default, handler: { action in
@@ -320,11 +331,11 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         guard let photoReferenceUrl = info[UIImagePickerControllerReferenceURL] as? URL else {
             // Handle picking a Photo from the Camera
             guard let image = info[UIImagePickerControllerOriginalImage] as? UIImage else { return }
+            
             if let key = sendPhotoMessage() {
                 guard let imageData = UIImageJPEGRepresentation(image, 1.0) else { return }
-                guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
                 
-                let imagePath = uid + "/\(Int(Date.timeIntervalSinceReferenceDate * 1000)).jpg"
+                let imagePath = "\(key).jpg"
                 let metadata = FIRStorageMetadata()
                 metadata.contentType = "image/jpeg"
                 
@@ -333,9 +344,9 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                         print("Error uploading photo: \(error.localizedDescription)")
                         return
                     }
-                    guard let metadataPath = metadata?.path else { return }
+                    guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
                     
-                    self.setImageURL(self.storageRef.child(metadataPath).description, forPhotoMessageWithKey: key)
+                    self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
                 }
             }
             
@@ -348,44 +359,41 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         guard let key = sendPhotoMessage() else { return }
         
         /*
-        let manager = PHImageManager.default()
-        manager.requestImage(for: asset, targetSize: CGSize(width: 640.0, height: 960.0), contentMode: .aspectFit, options: nil, resultHandler: { (result, info) -> Void in
-            
-            guard let result = result else { return }
-            guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
-            
-            let path = "\(uid)/\(Int(Date.timeIntervalSinceReferenceDate * 1000)).jpg"
-            guard let data = UIImageJPEGRepresentation(result, 1.0) else { return }
-            
-            let metadata = FIRStorageMetadata()
-            metadata.contentType = "image/jpeg"
-            
-            self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
-                if let error = error {
-                    print("Error uploading photo: \(error.localizedDescription)")
-                    return
-                }
-                guard let metadataPath = metadata?.path else { return }
-                
-                self.setImageURL(self.storageRef.child(metadataPath).description, forPhotoMessageWithKey: key)
-            })
-        })
+         let manager = PHImageManager.default()
+         manager.requestImage(for: asset, targetSize: CGSize(width: 640.0, height: 960.0), contentMode: .aspectFit, options: nil, resultHandler: { (result, info) -> Void in
+         
+         guard let result = result else { return }
+         
+         let path = "\(key).jpg"
+         guard let data = UIImageJPEGRepresentation(result, 1.0) else { return }
+         
+         let metadata = FIRStorageMetadata()
+         metadata.contentType = "image/jpeg"
+         
+         self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
+         if let error = error {
+         print("Error uploading photo: \(error.localizedDescription)")
+         return
+         }
+         guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
+         
+         self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
+         })
+         })
          */
         
         asset.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
             guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
-            guard let uid = FIRAuth.auth()?.currentUser?.uid else { return }
             
-            let path = "\(uid)/\(Int(Date.timeIntervalSinceReferenceDate * 1000))/\(photoReferenceUrl.lastPathComponent)"
-            
+            let path = "\(key).jpg"
             self.storageRef.child(path).putFile(imageFileURL, metadata: nil) { (metadata, error) in
                 if let error = error {
                     print("Error uploading photo: \(error.localizedDescription)")
                     return
                 }
-                guard let metadataPath = metadata?.path else { return }
+                guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
                 
-                self.setImageURL(self.storageRef.child(metadataPath).description, forPhotoMessageWithKey: key)
+                self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
             }
         })
     }

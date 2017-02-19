@@ -42,7 +42,9 @@ class LoginViewController: UIViewController {
             if let user = user {
                 let nav = self.storyboard?.instantiateViewController(withIdentifier: "NavChatViewController") as! UINavigationController
                 let chatVC = nav.viewControllers[0] as! ChatViewController
+                chatVC.senderId = user.uid
                 chatVC.senderDisplayName = user.displayName
+                chatVC.avatarString = user.photoURL?.absoluteString ?? "https://lh5.googleusercontent.com/-YpXDnaI_YM0/AAAAAAAAAAI/AAAAAAAAB30/rvs3MJ_YPOE/s96-c/photo.jpg"
                 let appDelegate = UIApplication.shared.delegate as! AppDelegate
                 appDelegate.window?.rootViewController = nav
             }
