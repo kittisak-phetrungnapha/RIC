@@ -107,7 +107,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAt indexPath: IndexPath!) -> JSQMessageAvatarImageDataSource! {
         
-        return JSQMessagesAvatarImageFactory.avatarImage(with: UIImage(named: "football.png"), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+        return JSQMessagesAvatarImageFactory.avatarImage(withUserInitials: "F", backgroundColor: UIColor.groupTableViewBackground, textColor: UIColor.lightGray, font: UIFont.systemFont(ofSize: 17), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
     }
     
     /*
@@ -130,6 +130,7 @@ final class ChatViewController: JSQMessagesViewController {
         } else {
             cell.textView?.textColor = UIColor.black
         }
+        
         return cell
     }
     
@@ -243,7 +244,7 @@ final class ChatViewController: JSQMessagesViewController {
     // MARK: UI and User Interaction
     private func setupOutgoingBubble() -> JSQMessagesBubbleImage {
         let bubbleImageFactory = JSQMessagesBubbleImageFactory()
-        return bubbleImageFactory!.outgoingMessagesBubbleImage(with: UIColor.jsq_messageBubbleBlue())
+        return bubbleImageFactory!.outgoingMessagesBubbleImage(with: UIColor.orange.withAlphaComponent(0.8))
     }
     
     private func setupIncomingBubble() -> JSQMessagesBubbleImage {
