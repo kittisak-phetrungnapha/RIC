@@ -64,7 +64,6 @@ extension AppDelegate: GIDSignInDelegate {
         FIRAuth.auth()?.signIn(with: credential, completion: { (user: FIRUser?, error: Error?) in
             if let error = error {
                 print(error.localizedDescription)
-                return
             }
         })
     }

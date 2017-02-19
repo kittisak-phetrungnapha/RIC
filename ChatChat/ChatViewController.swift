@@ -26,57 +26,37 @@ import FirebaseDatabase
 import FirebaseAuth
 import FirebaseStorage
 import Photos
+import GoogleSignIn
 
 final class ChatViewController: JSQMessagesViewController {
     
     // MARK: Properties
-    var channelRef: FIRDatabaseReference?
-    var channel: Channel? {
-        didSet {
-            title = channel?.name
-        }
-    }
     var messages = [JSQMessage]()
+    
     lazy var outgoingBubbleImageView: JSQMessagesBubbleImage = self.setupOutgoingBubble()
     lazy var incomingBubbleImageView: JSQMessagesBubbleImage = self.setupIncomingBubble()
-    private lazy var messageRef: FIRDatabaseReference = self.channelRef!.child("messages")
+    private lazy var messageRef: FIRDatabaseReference = FIRDatabase.database().reference().child("messages")
     private var newMessageRefHandle: FIRDatabaseHandle?
     
-    private lazy var userIsTypingRef: FIRDatabaseReference =
-        self.channelRef!.child("typingIndicator").child(self.senderId)
-    private var localTyping = false
-    var isTyping: Bool {
-        get {
-            return localTyping
-        }
-        set {
-            localTyping = newValue
-            userIsTypingRef.setValue(newValue)
-        }
-    }
-    private lazy var usersTypingQuery: FIRDatabaseQuery =
-        self.channelRef!.child("typingIndicator").queryOrderedByValue().queryEqual(toValue: true)
-    lazy var storageRef: FIRStorageReference = FIRStorage.storage().reference(forURL: "gs://fir-ios-blog.appspot.com")
+    lazy var storageRef: FIRStorageReference = FIRStorage.storage().reference(forURL: "gs://fir-devday.appspot.com")
     private let imageURLNotSetKey = "NOTSET"
     private var photoMessageMap = [String: JSQPhotoMediaItem]()
     private var updatedMessageRefHandle: FIRDatabaseHandle?
+    
+    private let username = FIRAuth.auth()?.currentUser?.displayName ?? "Kittisak Phetrungnapha"
+    private let avatar = FIRAuth.auth()?.currentUser?.photoURL?.absoluteString ?? "https://lh5.googleusercontent.com/-YpXDnaI_YM0/AAAAAAAAAAI/AAAAAAAAB30/rvs3MJ_YPOE/s96-c/photo.jpg"
     
     // MARK: View Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        self.title = "Firebase"
+        setupLogOutButton()
+        
         self.senderId = FIRAuth.auth()?.currentUser?.uid
-        // No avatars
-        collectionView!.collectionViewLayout.incomingAvatarViewSize = .zero
-        collectionView!.collectionViewLayout.outgoingAvatarViewSize = .zero
         
         observeMessages()
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        observeTyping()
     }
     
     deinit {
@@ -86,6 +66,27 @@ final class ChatViewController: JSQMessagesViewController {
         if let refHandle = updatedMessageRefHandle {
             messageRef.removeObserver(withHandle: refHandle)
         }
+    }
+    
+    // MARK: -
+    private func setupLogOutButton() {
+        let logOutButton = UIBarButtonItem(title: "Sign out", style: .plain, target: self, action: #selector(signOut))
+        self.navigationItem.leftBarButtonItem = logOutButton
+    }
+    
+    func signOut() {
+        let firebaseAuth = FIRAuth.auth()
+        do {
+            try firebaseAuth?.signOut()
+        } catch let signOutError as NSError {
+            print ("Error Firebase signing out: %@", signOutError)
+        }
+        
+        GIDSignIn.sharedInstance().signOut()
+        
+        let loginVC = self.storyboard?.instantiateViewController(withIdentifier: "LoginViewController")
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        appDelegate.window?.rootViewController = loginVC
     }
     
     // MARK: Collection view data source (and related) methods
@@ -99,7 +100,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, messageBubbleImageDataForItemAt indexPath: IndexPath!) -> JSQMessageBubbleImageDataSource! {
         let message = messages[indexPath.item]
-        if message.senderId == senderId {
+        if message.senderId == username {
             return outgoingBubbleImageView
         } else {
             return incomingBubbleImageView
@@ -107,6 +108,16 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAt indexPath: IndexPath!) -> JSQMessageAvatarImageDataSource! {
+        
+        return JSQMessagesAvatarImageFactory.avatarImage(with: UIImage(named: "football.png"), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+    }
+    
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
+        let message = messages[indexPath.item]
+        return NSAttributedString(string: message.senderDisplayName)
+    }
+    
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellBottomLabelAt indexPath: IndexPath!) -> NSAttributedString! {
         return nil
     }
     
@@ -114,7 +125,7 @@ final class ChatViewController: JSQMessagesViewController {
         let cell = super.collectionView(collectionView, cellForItemAt: indexPath) as! JSQMessagesCollectionViewCell
         let message = messages[indexPath.item]
         
-        if message.senderId == senderId {
+        if message.senderId == username {
             cell.textView?.textColor = UIColor.white
         } else {
             cell.textView?.textColor = UIColor.black
@@ -126,15 +137,15 @@ final class ChatViewController: JSQMessagesViewController {
     override func didPressSend(_ button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: Date!) {
         let itemRef = messageRef.childByAutoId()
         let messageItem = [
-            "senderId": senderId!,
-            "senderName": senderDisplayName!,
-            "text": text!,
+            "avatar": avatar,
+            "data": text,
+            "type": "text",
+            "username": username
             ]
         
         itemRef.setValue(messageItem)
         JSQSystemSoundPlayer.jsq_playMessageSentSound()
         finishSendingMessage()
-        isTyping = false
     }
     
     private func observeMessages() {
@@ -145,22 +156,30 @@ final class ChatViewController: JSQMessagesViewController {
         newMessageRefHandle = messageQuery.observe(.childAdded, with: { (snapshot) -> Void in
             let messageData = snapshot.value as! Dictionary<String, String>
             
-            if let id = messageData["senderId"] as String!, let name = messageData["senderName"] as String!, let text = messageData["text"] as String!, text.characters.count > 0 {
-                
-                self.addMessage(withId: id, name: name, text: text)
+            if let type = messageData["type"] as String!, type == "text", let username = messageData["username"] as String!, let text = messageData["data"] as String!, text.characters.count > 0 {
+                self.addMessage(withId: username, name: "Top", text: text)
                 self.finishReceivingMessage()
             }
                 
-            else if let id = messageData["senderId"] as String!,
-                let photoURL = messageData["photoURL"] as String! {
+            else if let type = messageData["type"] as String!, type == "image",
+                let photoURL = messageData["data"] as String!,
+                let username = messageData["username"] as String! {
                 
-                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: id == self.senderId) {
-                    self.addPhotoMessage(withId: id, key: snapshot.key, mediaItem: mediaItem)
+                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: false) {
+                    self.addPhotoMessage(withId: username, key: snapshot.key, mediaItem: mediaItem)
                     
                     if photoURL.hasPrefix("gs://") {
                         self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
                     }
                 }
+                
+//                if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: id == self.senderId) {
+//                    self.addPhotoMessage(withId: id, key: snapshot.key, mediaItem: mediaItem)
+//                    
+//                    if photoURL.hasPrefix("gs://") {
+//                        self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
+//                    }
+//                }
             }
                 
             else {
@@ -176,28 +195,13 @@ final class ChatViewController: JSQMessagesViewController {
             let key = snapshot.key
             let messageData = snapshot.value as! Dictionary<String, String>
             
-            if let photoURL = messageData["photoURL"] as String! {
+            if let photoURL = messageData["data"] as String! {
                 // The photo has been updated.
                 if let mediaItem = self.photoMessageMap[key] {
                     self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: key)
                 }
             }
         })
-    }
-    
-    private func observeTyping() {
-        userIsTypingRef.onDisconnectRemoveValue()
-        
-        usersTypingQuery.observe(.value) { (data: FIRDataSnapshot) in
-            // You're the only one typing, don't show the indicator
-            if data.childrenCount == 1 && self.isTyping {
-                return
-            }
-            
-            // Are there others typing?
-            self.showTypingIndicator = data.childrenCount > 0
-            self.scrollToBottom(animated: true)
-        }
     }
     
     private func fetchImageDataAtURL(_ photoURL: String, forMediaItem mediaItem: JSQPhotoMediaItem, clearsPhotoMessageMapOnSuccessForKey key: String?) {
@@ -275,7 +279,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     func setImageURL(_ url: String, forPhotoMessageWithKey key: String) {
         let itemRef = messageRef.child(key)
-        itemRef.updateChildValues(["photoURL": url])
+        itemRef.updateChildValues(["data": url])
     }
     
     override func didPressAccessoryButton(_ sender: UIButton) {
@@ -303,12 +307,6 @@ final class ChatViewController: JSQMessagesViewController {
             picker.sourceType = .photoLibrary
             present(picker, animated: true, completion:nil)
         }
-    }
-    
-    // MARK: UITextViewDelegate methods
-    override func textViewDidChange(_ textView: UITextView) {
-        super.textViewDidChange(textView)
-        isTyping = textView.text != ""
     }
     
 }

@@ -38,7 +38,7 @@ class LoginViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        authListener = FIRAuth.auth()?.addStateDidChangeListener({ [unowned self] (auth, user) in
+        authListener = FIRAuth.auth()?.addStateDidChangeListener({ (auth, user) in
             if let user = user {
                 let nav = self.storyboard?.instantiateViewController(withIdentifier: "NavChatViewController") as! UINavigationController
                 let chatVC = nav.viewControllers[0] as! ChatViewController
