@@ -22,99 +22,41 @@
 
 import UIKit
 import FirebaseAuth
-import FBSDKLoginKit
+import GoogleSignIn
 
 class LoginViewController: UIViewController {
     
-    @IBOutlet weak var nameField: UITextField!
-    @IBOutlet weak var bottomLayoutGuideConstraint: NSLayoutConstraint!
-    @IBOutlet weak var fbLoginButton: FBSDKLoginButton!
+    private var authListener: FIRAuthStateDidChangeListenerHandle?
     
     // MARK: View Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        //        fbLoginButton.delegate = self
+        GIDSignIn.sharedInstance().uiDelegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.keyboardWillShowNotification(_:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.keyboardWillHideNotification(_:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        
+        authListener = FIRAuth.auth()?.addStateDidChangeListener({ [unowned self] (auth, user) in
+            if let user = user {
+                let nav = self.storyboard?.instantiateViewController(withIdentifier: "NavChatViewController") as! UINavigationController
+                let chatVC = nav.viewControllers[0] as! ChatViewController
+                chatVC.senderDisplayName = user.displayName
+                let appDelegate = UIApplication.shared.delegate as! AppDelegate
+                appDelegate.window?.rootViewController = nav
+            }
+        })
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillShow, object: nil)
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
-    }
-    
-    @IBAction func loginDidTouch(_ sender: AnyObject) {
-        if nameField?.text != "" {
-            FIRAuth.auth()?.signInAnonymously(completion: { (user, error) in
-                if let err = error {
-                    print(err.localizedDescription)
-                    return
-                }
-                
-                self.performSegue(withIdentifier: "LoginToChat", sender: nil)
-            })
-        }
-    }
-    
-    // MARK: - Notifications
-    
-    func keyboardWillShowNotification(_ notification: Notification) {
-        let keyboardEndFrame = ((notification as NSNotification).userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
-        let convertedKeyboardEndFrame = view.convert(keyboardEndFrame, from: view.window)
-        bottomLayoutGuideConstraint.constant = view.bounds.maxY - convertedKeyboardEndFrame.minY
-    }
-    
-    func keyboardWillHideNotification(_ notification: Notification) {
-        bottomLayoutGuideConstraint.constant = 48
-    }
-    
-    // MARK: Navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        super.prepare(for: segue, sender: sender)
-        let navVc = segue.destination as! UINavigationController
-        let channelVc = navVc.viewControllers.first as! ChannelListViewController
-        
-        channelVc.senderDisplayName = nameField?.text
+        FIRAuth.auth()?.removeStateDidChangeListener(authListener!)
     }
     
 }
 
-// MARK: - FBSDKLoginButtonDelegate
-
-extension LoginViewController: FBSDKLoginButtonDelegate {
-    
-    func loginButton(_ loginButton: FBSDKLoginButton!, didCompleteWith result: FBSDKLoginManagerLoginResult!, error: Error!) {
-        if let error = error {
-            print(error.localizedDescription)
-            return
-        }
-        guard FBSDKAccessToken.current() != nil else { return }
-        
-        let credential = FIRFacebookAuthProvider.credential(withAccessToken: FBSDKAccessToken.current().tokenString)
-        FIRAuth.auth()?.signIn(with: credential) { (user, error) in
-            if let error = error {
-                print(error.localizedDescription)
-                return
-            }
-            
-            self.performSegue(withIdentifier: "LoginToChat", sender: nil)
-        }
-    }
-    
-    func loginButtonDidLogOut(_ loginButton: FBSDKLoginButton!) {
-        let firebaseAuth = FIRAuth.auth()
-        do {
-            try firebaseAuth?.signOut()
-        } catch let signOutError as NSError {
-            print ("Error signing out: %@", signOutError.localizedDescription)
-        }
-    }
+// MARK: - GIDSignInUIDelegate
+extension LoginViewController: GIDSignInUIDelegate {
     
 }
-

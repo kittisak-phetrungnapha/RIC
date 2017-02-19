@@ -7,21 +7,21 @@
 	<key>AD_UNIT_ID_FOR_INTERSTITIAL_TEST</key>
 	<string>ca-app-pub-3940256099942544/4411468910</string>
 	<key>CLIENT_ID</key>
-	<string>911016165412-vhnl13tpvb13jqpc8r0ofjhela6ijnhb.apps.googleusercontent.com</string>
+	<string>610392074080-vufpajbm3491q7erioqp9v9vebjqujt1.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.911016165412-vhnl13tpvb13jqpc8r0ofjhela6ijnhb</string>
+	<string>com.googleusercontent.apps.610392074080-vufpajbm3491q7erioqp9v9vebjqujt1</string>
 	<key>API_KEY</key>
-	<string>AIzaSyBHqzBhJ398fdk9j77y8DKXHKKDuBQW2O0</string>
+	<string>AIzaSyBhxKSEkQV51O3H0xM5MT60OyqMQjatKSM</string>
 	<key>GCM_SENDER_ID</key>
-	<string>911016165412</string>
+	<string>610392074080</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.medium.csnu17top.firebase-chat</string>
 	<key>PROJECT_ID</key>
-	<string>fir-ios-blog</string>
+	<string>fir-devday</string>
 	<key>STORAGE_BUCKET</key>
-	<string>fir-ios-blog.appspot.com</string>
+	<string>fir-devday.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<true/>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -33,8 +33,8 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true/>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:911016165412:ios:7f3fb0392b44aecb</string>
+	<string>1:610392074080:ios:7f3fb0392b44aecb</string>
 	<key>DATABASE_URL</key>
-	<string>https://fir-ios-blog.firebaseio.com</string>
+	<string>https://fir-devday.firebaseio.com</string>
 </dict>
 </plist>
