@@ -27,6 +27,7 @@ import FirebaseAuth
 import FirebaseStorage
 import Photos
 import GoogleSignIn
+import SDWebImage
 
 final class ChatViewController: JSQMessagesViewController {
     
@@ -46,6 +47,7 @@ final class ChatViewController: JSQMessagesViewController {
     private var photoMessageMap = [String: JSQPhotoMediaItem]()
     
     var avatarString: String!
+    private lazy var avatarImage: JSQMessagesAvatarImage! = JSQMessagesAvatarImageFactory.avatarImage(withUserInitials: "F", backgroundColor: UIColor.groupTableViewBackground, textColor: UIColor.lightGray, font: UIFont.systemFont(ofSize: 17), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
     
     // MARK: View Lifecycle
     
@@ -54,6 +56,14 @@ final class ChatViewController: JSQMessagesViewController {
         
         self.title = "Firebase"
         setupLogOutButton()
+        
+        collectionView!.collectionViewLayout.outgoingAvatarViewSize = .zero
+        
+        _ = SDWebImageManager.shared().imageDownloader?.downloadImage(with: URL(string: avatarString), options: SDWebImageDownloaderOptions(rawValue: 0), progress: nil, completed: { (image: UIImage?, data: Data?, error: Error?, finished: Bool) in
+            guard let image = image else { return }
+            
+            self.avatarImage?.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+        })
         
         observeMessages()
     }
@@ -106,20 +116,13 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAt indexPath: IndexPath!) -> JSQMessageAvatarImageDataSource! {
+        let message = messages[indexPath.item]
+        if message.senderId == self.senderId {
+            return nil
+        }
         
-        return JSQMessagesAvatarImageFactory.avatarImage(withUserInitials: "F", backgroundColor: UIColor.groupTableViewBackground, textColor: UIColor.lightGray, font: UIFont.systemFont(ofSize: 17), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+        return self.avatarImage
     }
-    
-    /*
-     override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
-     let message = messages[indexPath.item]
-     return NSAttributedString(string: message.senderDisplayName)
-     }
-     
-     override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForCellBottomLabelAt indexPath: IndexPath!) -> NSAttributedString! {
-     return nil
-     }
-     */
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = super.collectionView(collectionView, cellForItemAt: indexPath) as! JSQMessagesCollectionViewCell
@@ -132,6 +135,24 @@ final class ChatViewController: JSQMessagesViewController {
         }
         
         return cell
+    }
+    
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForMessageBubbleTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
+        let message = messages[indexPath.item]
+        if message.senderId == self.senderId {
+            return nil
+        }
+        
+        return NSAttributedString(string: message.senderDisplayName)
+    }
+    
+    override func collectionView(_ collectionView: JSQMessagesCollectionView!, layout collectionViewLayout: JSQMessagesCollectionViewFlowLayout!, heightForMessageBubbleTopLabelAt indexPath: IndexPath!) -> CGFloat {
+        let message = messages[indexPath.item]
+        if message.senderId == self.senderId {
+            return 0.0
+        }
+        
+        return kJSQMessagesCollectionViewCellLabelHeightDefault
     }
     
     // MARK: Firebase related methods
@@ -174,10 +195,11 @@ final class ChatViewController: JSQMessagesViewController {
             else if let type = messageData["type"] as String!,
                 type == "image",
                 let id = messageData["senderId"] as String!,
+                let displayName = messageData["username"] as String!,
                 let photoURL = messageData["data"] as String! {
                 
                 if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: self.senderId == id) {
-                    self.addPhotoMessage(withId: id, key: snapshot.key, mediaItem: mediaItem)
+                    self.addPhotoMessage(withId: id, displayName: displayName, key: snapshot.key, mediaItem: mediaItem)
                     
                     if photoURL.hasPrefix("gs://") || photoURL.hasPrefix("http://") || photoURL.hasPrefix("https://") {
                         self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
@@ -258,8 +280,8 @@ final class ChatViewController: JSQMessagesViewController {
         }
     }
     
-    private func addPhotoMessage(withId id: String, key: String, mediaItem: JSQPhotoMediaItem) {
-        if let message = JSQMessage(senderId: id, displayName: "", media: mediaItem) {
+    private func addPhotoMessage(withId id: String, displayName: String, key: String, mediaItem: JSQPhotoMediaItem) {
+        if let message = JSQMessage(senderId: id, displayName: displayName, media: mediaItem) {
             messages.append(message)
             
             if (mediaItem.image == nil) {
