@@ -29,7 +29,6 @@ class LoginViewController: UIViewController {
     private var authListener: FIRAuthStateDidChangeListenerHandle?
     
     // MARK: View Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         GIDSignIn.sharedInstance().uiDelegate = self
@@ -45,6 +44,7 @@ class LoginViewController: UIViewController {
                 chatVC.senderId = user.uid
                 chatVC.senderDisplayName = "iOS"
                 chatVC.avatarString = user.photoURL?.absoluteString ?? "https://lh5.googleusercontent.com/-YpXDnaI_YM0/AAAAAAAAAAI/AAAAAAAAB30/rvs3MJ_YPOE/s96-c/photo.jpg"
+                chatVC.title = "Firebase"
                 let appDelegate = UIApplication.shared.delegate as! AppDelegate
                 appDelegate.window?.rootViewController = nav
             }
