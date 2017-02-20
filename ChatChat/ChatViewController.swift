@@ -47,7 +47,7 @@ final class ChatViewController: JSQMessagesViewController {
     private var photoMessageMap = [String: JSQPhotoMediaItem]()
     
     var avatarString: String!
-    private lazy var avatarImage: JSQMessagesAvatarImage! = JSQMessagesAvatarImageFactory.avatarImage(withUserInitials: "F", backgroundColor: UIColor.groupTableViewBackground, textColor: UIColor.lightGray, font: UIFont.systemFont(ofSize: 17), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+    var avatars = [String: JSQMessagesAvatarImage]()
     
     // MARK: View Lifecycle
     
@@ -56,13 +56,6 @@ final class ChatViewController: JSQMessagesViewController {
         
         self.title = "Firebase"
         setupLogOutButton()
-        
-        collectionView!.collectionViewLayout.outgoingAvatarViewSize = .zero
-        
-        KingfisherManager.shared.downloader.downloadImage(with: URL(string: avatarString)!, options: nil, progressBlock: nil) { (image: Image?, error: NSError?, imageUrl: URL?, data: Data?) in
-            guard let image = image else { return }
-            self.avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
-        }
         
         observeMessages()
     }
@@ -116,11 +109,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, avatarImageDataForItemAt indexPath: IndexPath!) -> JSQMessageAvatarImageDataSource! {
         let message = messages[indexPath.item]
-        if message.senderId == self.senderId {
-            return nil
-        }
-        
-        return self.avatarImage
+        return self.avatars[message.senderId]
     }
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -138,19 +127,10 @@ final class ChatViewController: JSQMessagesViewController {
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, attributedTextForMessageBubbleTopLabelAt indexPath: IndexPath!) -> NSAttributedString! {
         let message = messages[indexPath.item]
-        if message.senderId == self.senderId {
-            return nil
-        }
-        
         return NSAttributedString(string: message.senderDisplayName)
     }
     
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, layout collectionViewLayout: JSQMessagesCollectionViewFlowLayout!, heightForMessageBubbleTopLabelAt indexPath: IndexPath!) -> CGFloat {
-        let message = messages[indexPath.item]
-        if message.senderId == self.senderId {
-            return 0.0
-        }
-        
         return kJSQMessagesCollectionViewCellLabelHeightDefault
     }
     
@@ -183,10 +163,12 @@ final class ChatViewController: JSQMessagesViewController {
                 type == "text",
                 let id = messageData["senderId"] as String!,
                 let displayName = messageData["username"] as String!,
+                let avatar = messageData["avatar"] as String!,
                 let data = messageData["data"] as String!,
                 data.characters.count > 0 {
                 
                 self.addMessage(withId: id, name: displayName, text: data)
+                self.downloadCircleAvatar(with: avatar, avatarImage: self.prepareAvatarImage(with: id))
                 self.finishReceivingMessage()
             }
                 
@@ -195,10 +177,12 @@ final class ChatViewController: JSQMessagesViewController {
                 type == "image",
                 let id = messageData["senderId"] as String!,
                 let displayName = messageData["username"] as String!,
-                let photoURL = messageData["data"] as String! {
+                let photoURL = messageData["data"] as String!,
+                let avatar = messageData["avatar"] as String! {
                 
                 if let mediaItem = JSQPhotoMediaItem(maskAsOutgoing: self.senderId == id) {
                     self.addPhotoMessage(withId: id, displayName: displayName, key: snapshot.key, mediaItem: mediaItem)
+                    self.downloadCircleAvatar(with: avatar, avatarImage: self.prepareAvatarImage(with: id))
                     
                     if photoURL.hasPrefix("gs://") || photoURL.hasPrefix("http://") || photoURL.hasPrefix("https://") {
                         self.fetchImageDataAtURL(photoURL, forMediaItem: mediaItem, clearsPhotoMessageMapOnSuccessForKey: nil)
@@ -312,6 +296,37 @@ final class ChatViewController: JSQMessagesViewController {
     func setImageURL(_ url: String, forPhotoMessageWithKey key: String) {
         let itemRef = messageRef.child(key)
         itemRef.updateChildValues(["data": url])
+    }
+    
+    func downloadCircleAvatar(with imageUrl: String, avatarImage: JSQMessagesAvatarImage) {
+        ImageCache.default.retrieveImage(forKey: imageUrl, options: nil) {
+            image, cacheType in
+            // Use cache if it's available.
+            if let image = image {
+                avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+                return
+            }
+            
+            // Download image from url.
+            ImageDownloader.default.downloadImage(with: URL(string: imageUrl)!, options: [], progressBlock: nil) {
+                (image, error, url, data) in
+                if let image = image {
+                    avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+                    
+                    // Save image to disk.
+                    ImageCache.default.store(image, forKey: imageUrl)
+                }
+            }
+        }
+    }
+    
+    func prepareAvatarImage(with id: String) -> JSQMessagesAvatarImage! {
+        if (self.avatars[id] == nil) {
+            let avartarImage = JSQMessagesAvatarImageFactory.avatarImage(withUserInitials: "F", backgroundColor: UIColor.groupTableViewBackground, textColor: UIColor.lightGray, font: UIFont.systemFont(ofSize: 17), diameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+            self.avatars[id] = avartarImage
+        }
+        
+        return self.avatars[id]
     }
     
     override func didPressAccessoryButton(_ sender: UIButton) {
