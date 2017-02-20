@@ -151,7 +151,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     private func observeMessages() {
-        let messageQuery = messageRef.queryLimited(toLast: 50)
+        let messageQuery = messageRef.queryLimited(toLast: 25)
         
         // We can use the observe method to listen for new
         // messages being written to the Firebase DB
@@ -172,7 +172,7 @@ final class ChatViewController: JSQMessagesViewController {
                 self.finishReceivingMessage()
             }
                 
-                // image
+            // image
             else if let type = messageData["type"] as String!,
                 type == "image",
                 let id = messageData["senderId"] as String!,
@@ -363,44 +363,45 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
         guard let asset = assets.firstObject else { return }
         guard let key = sendPhotoMessage() else { return }
         
-        /*
-         let manager = PHImageManager.default()
-         manager.requestImage(for: asset, targetSize: CGSize(width: 640.0, height: 960.0), contentMode: .aspectFit, options: nil, resultHandler: { (result, info) -> Void in
-         
-         guard let result = result else { return }
-         
-         let path = "\(key).jpg"
-         guard let data = UIImageJPEGRepresentation(result, 1.0) else { return }
-         
-         let metadata = FIRStorageMetadata()
-         metadata.contentType = "image/jpeg"
-         
-         self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
-         if let error = error {
-         print("Error uploading photo: \(error.localizedDescription)")
-         return
-         }
-         guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
-         
-         self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
-         })
-         })
-         */
-        
-        asset.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
-            guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
-            
-            let path = "\(key).jpg"
-            self.storageRef.child(path).putFile(imageFileURL, metadata: nil) { (metadata, error) in
-                if let error = error {
-                    print("Error uploading photo: \(error.localizedDescription)")
-                    return
-                }
-                guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
+        if TARGET_OS_SIMULATOR != 0 {
+            asset.requestContentEditingInput(with: nil, completionHandler: { (contentEditingInput, info) in
+                guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
                 
-                self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
-            }
-        })
+                let path = "\(key).jpg"
+                self.storageRef.child(path).putFile(imageFileURL, metadata: nil) { (metadata, error) in
+                    if let error = error {
+                        print("Error uploading photo: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
+                    
+                    self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
+                }
+            })
+        }
+        else {
+            let manager = PHImageManager.default()
+            manager.requestImage(for: asset, targetSize: CGSize(width: 640.0, height: 960.0), contentMode: .aspectFit, options: nil, resultHandler: { (result, info) -> Void in
+                
+                guard let result = result else { return }
+                
+                let path = "\(key).jpg"
+                guard let data = UIImageJPEGRepresentation(result, 1.0) else { return }
+                
+                let metadata = FIRStorageMetadata()
+                metadata.contentType = "image/jpeg"
+                
+                self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
+                    if let error = error {
+                        print("Error uploading photo: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let downloadUrl = metadata?.downloadURL()?.absoluteString else { return }
+                    
+                    self.setImageURL(downloadUrl, forPhotoMessageWithKey: key)
+                })
+            })
+        }
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
