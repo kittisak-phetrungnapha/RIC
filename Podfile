@@ -9,6 +9,6 @@ target 'ChatChat' do
   pod 'Firebase/Database'
   pod 'JSQMessagesViewController'
   pod 'GoogleSignIn'
-  pod 'SDWebImage'
+  pod 'Kingfisher'
 
 end

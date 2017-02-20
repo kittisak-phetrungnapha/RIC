@@ -27,7 +27,7 @@ import FirebaseAuth
 import FirebaseStorage
 import Photos
 import GoogleSignIn
-import SDWebImage
+import Kingfisher
 
 final class ChatViewController: JSQMessagesViewController {
     
@@ -59,11 +59,10 @@ final class ChatViewController: JSQMessagesViewController {
         
         collectionView!.collectionViewLayout.outgoingAvatarViewSize = .zero
         
-        _ = SDWebImageManager.shared().imageDownloader?.downloadImage(with: URL(string: avatarString), options: SDWebImageDownloaderOptions(rawValue: 0), progress: nil, completed: { (image: UIImage?, data: Data?, error: Error?, finished: Bool) in
+        KingfisherManager.shared.downloader.downloadImage(with: URL(string: avatarString)!, options: nil, progressBlock: nil) { (image: Image?, error: NSError?, imageUrl: URL?, data: Data?) in
             guard let image = image else { return }
-            
-            self.avatarImage?.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
-        })
+            self.avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
+        }
         
         observeMessages()
     }
