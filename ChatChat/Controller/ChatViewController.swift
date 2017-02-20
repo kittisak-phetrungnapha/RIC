@@ -56,6 +56,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     deinit {
+        // TODO: - Unregister Firebase listeners.
         if let refHandle = newMessageRefHandle {
             messageRef.removeObserver(withHandle: refHandle)
         }
@@ -71,12 +72,14 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     func signOut() {
+        // TODO: - Firebase Sign out
         do {
             try FIRAuth.auth()?.signOut()
         } catch let signOutError as NSError {
             print ("Error Firebase signing out: \(signOutError)")
         }
         
+        // TODO: Google Sign out
         GIDSignIn.sharedInstance().signOut()
         
         let loginVC = self.storyboard?.instantiateViewController(withIdentifier: "LoginViewController")
@@ -131,6 +134,7 @@ final class ChatViewController: JSQMessagesViewController {
     
     // MARK: - Firebase related methods
     override func didPressSend(_ button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: Date!) {
+        // TODO: - Sent text message to Firebase
         let itemRef = messageRef.childByAutoId()
         let messageItem = [
             "avatar": avatarString,
@@ -152,6 +156,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     private func observeAddNewMessage(with messageQuery: FIRDatabaseQuery) {
+        // TODO: - observe childAdded
         newMessageRefHandle = messageQuery.observe(.childAdded, with: { (snapshot) -> Void in
             let messageData = snapshot.value as! Dictionary<String, String>
             
@@ -193,6 +198,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     private func observeUpdateMessage(with messageQuery: FIRDatabaseQuery) {
+        // TODO: - observe childChanged
         updatedMessageRefHandle = messageRef.observe(.childChanged, with: { (snapshot) in
             let key = snapshot.key
             let messageData = snapshot.value as! Dictionary<String, String>
@@ -253,6 +259,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     fileprivate func sendPhotoMessage() -> String? {
+        // TODO: - Sent photo message to Firebase.
         let itemRef = messageRef.childByAutoId()
         
         let messageItem = [
@@ -271,6 +278,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     fileprivate func setImageURL(_ url: String, forPhotoMessageWithKey key: String) {
+        // TODO: - Update existing image when generate image url successfully.
         let itemRef = messageRef.child(key)
         itemRef.updateChildValues(["data": url])
     }
@@ -343,6 +351,7 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                 let metadata = FIRStorageMetadata()
                 metadata.contentType = "image/jpeg"
                 
+                // TODO: - Upload image to storage.
                 storageRef.child(imagePath).put(imageData, metadata: metadata) { (metadata, error) in
                     self.handleImageResult(with: metadata, error: error, key: key)
                 }
@@ -361,6 +370,8 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                 guard let imageFileURL = contentEditingInput?.fullSizeImageURL else { return }
                 
                 let path = "\(key).jpg"
+                
+                // TODO: - Upload image to storage.
                 self.storageRef.child(path).putFile(imageFileURL, metadata: nil) { (metadata, error) in
                     self.handleImageResult(with: metadata, error: error, key: key)
                 }
@@ -378,6 +389,7 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                 let metadata = FIRStorageMetadata()
                 metadata.contentType = "image/jpeg"
                 
+                // TODO: - Upload image to storage.
                 self.storageRef.child(path).put(data, metadata: metadata, completion: { (metadata, error) in
                     self.handleImageResult(with: metadata, error: error, key: key)
                 })

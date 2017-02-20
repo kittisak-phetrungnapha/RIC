@@ -31,12 +31,14 @@ class LoginViewController: UIViewController {
     // MARK: View Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        // TODO: - Setup GoogleSignIn uiDelegate
         GIDSignIn.sharedInstance().uiDelegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        // TODO: - Register FIRAuthStateDidChangeListenerHandle.
         authListener = FIRAuth.auth()?.addStateDidChangeListener({ (auth, user) in
             if let user = user {
                 let nav = self.storyboard?.instantiateViewController(withIdentifier: "NavChatViewController") as! UINavigationController
@@ -53,6 +55,7 @@ class LoginViewController: UIViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        // TODO: - Unregister FIRAuthStateDidChangeListenerHandle.
         FIRAuth.auth()?.removeStateDidChangeListener(authListener!)
     }
     
