@@ -17,6 +17,7 @@
 		BB5355841BEF765800321277 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BB5355821BEF765800321277 /* LaunchScreen.storyboard */; };
 		BB53558F1BEF7E9700321277 /* ChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB53558E1BEF7E9700321277 /* ChatViewController.swift */; };
 		EE5E28EE1E597A0900D0CC50 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EE5E28ED1E597A0900D0CC50 /* GoogleService-Info.plist */; };
+		EE5E28F71E5ACBBA00D0CC50 /* ImageDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E28F61E5ACBBA00D0CC50 /* ImageDownloadManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		E8DDF38A1BEF88DC00B5F45A /* Accounts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accounts.framework; path = System/Library/Frameworks/Accounts.framework; sourceTree = SDKROOT; };
 		E8DDF38C1BEF88E200B5F45A /* Social.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Social.framework; path = System/Library/Frameworks/Social.framework; sourceTree = SDKROOT; };
 		EE5E28ED1E597A0900D0CC50 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		EE5E28F61E5ACBBA00D0CC50 /* ImageDownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageDownloadManager.swift; sourceTree = "<group>"; };
 		FAB820FBE1B38E835EF50279 /* Pods-ChatChat.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ChatChat.debug.xcconfig"; path = "Pods/Target Support Files/Pods-ChatChat/Pods-ChatChat.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				4570C5E21D54FD11007946D9 /* ChatChat.entitlements */,
+				EE5E28F51E5ACB8100D0CC50 /* Helper */,
 				BB5355901BEF816500321277 /* Controller */,
 				BB5355921BEF818700321277 /* Layout */,
 				BB5355911BEF817A00321277 /* Supporting Files */,
@@ -130,6 +133,14 @@
 				459E535E1D4BF36A00E675A5 /* License */,
 			);
 			name = Layout;
+			sourceTree = "<group>";
+		};
+		EE5E28F51E5ACB8100D0CC50 /* Helper */ = {
+			isa = PBXGroup;
+			children = (
+				EE5E28F61E5ACBBA00D0CC50 /* ImageDownloadManager.swift */,
+			);
+			path = Helper;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -266,6 +277,7 @@
 				BB53557C1BEF765800321277 /* LoginViewController.swift in Sources */,
 				459780D31D6465FB007BE66F /* UIImage+Gif.swift in Sources */,
 				BB53558F1BEF7E9700321277 /* ChatViewController.swift in Sources */,
+				EE5E28F71E5ACBBA00D0CC50 /* ImageDownloadManager.swift in Sources */,
 				BB53557A1BEF765800321277 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -151,7 +151,7 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     private func observeMessages() {
-        let messageQuery = messageRef.queryLimited(toLast: 25)
+        let messageQuery = messageRef.queryLimited(toLast: 50)
         
         // We can use the observe method to listen for new
         // messages being written to the Firebase DB
@@ -216,33 +216,15 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     private func fetchImageDataAtURL(_ photoURL: String, forMediaItem mediaItem: JSQPhotoMediaItem, clearsPhotoMessageMapOnSuccessForKey key: String?) {
-        let storageRef = FIRStorage.storage().reference(forURL: photoURL)
         
-        storageRef.data(withMaxSize: INT64_MAX) { (data, error) in
-            if let error = error {
-                print("Error downloading image data: \(error.localizedDescription)")
-                return
+        ImageDownloadManager.shared.fetchImage(with: photoURL) { (image: UIImage?) in
+            if let image = image {
+                mediaItem.image = image
             }
             
-            storageRef.metadata(completion: { (metadata, metadataErr) in
-                if let error = metadataErr {
-                    print("Error downloading metadata: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let data = data else { return }
-                
-                if (metadata?.contentType == "image/gif") {
-                    mediaItem.image = UIImage.gifWithData(data)
-                } else {
-                    mediaItem.image = UIImage.init(data: data)
-                }
-                self.collectionView.reloadData()
-                
-                guard let key = key else { return }
-                
-                self.photoMessageMap.removeValue(forKey: key)
-            })
+            self.finishReceivingMessage()
+            guard let key = key else { return }
+            self.photoMessageMap.removeValue(forKey: key)
         }
     }
     
@@ -299,25 +281,11 @@ final class ChatViewController: JSQMessagesViewController {
     }
     
     func downloadCircleAvatar(with imageUrl: String, avatarImage: JSQMessagesAvatarImage) {
-        ImageCache.default.retrieveImage(forKey: imageUrl, options: nil) {
-            image, cacheType in
-            // Use cache if it's available.
+        ImageDownloadManager.shared.fetchImage(with: imageUrl, completion: { (image: Image?) in
             if let image = image {
                 avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
-                return
             }
-            
-            // Download image from url.
-            ImageDownloader.default.downloadImage(with: URL(string: imageUrl)!, options: [], progressBlock: nil) {
-                (image, error, url, data) in
-                if let image = image {
-                    avatarImage.avatarImage = JSQMessagesAvatarImageFactory.circularAvatarImage(image, withDiameter: UInt(kJSQMessagesCollectionViewAvatarSizeDefault))
-                    
-                    // Save image to disk.
-                    ImageCache.default.store(image, forKey: imageUrl)
-                }
-            }
-        }
+        })
     }
     
     func prepareAvatarImage(with id: String) -> JSQMessagesAvatarImage! {
