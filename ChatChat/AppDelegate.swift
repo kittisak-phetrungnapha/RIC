@@ -33,6 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // TODO: - Setup Firebase core.
         FIRApp.configure()
+        FIRDatabase.database().persistenceEnabled = true
         
         // TODO: - Setup GoogleSignIn clientID and delegate.
         GIDSignIn.sharedInstance().clientID = FIRApp.defaultApp()?.options.clientID
