@@ -26,42 +26,28 @@ import GoogleSignIn
 
 class LoginViewController: UIViewController {
     
-    private var authListener: FIRAuthStateDidChangeListenerHandle?
+    // TODO: - Add authListener
     
     // MARK: View Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         // TODO: - Setup GoogleSignIn uiDelegate
-        GIDSignIn.sharedInstance().uiDelegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         // TODO: - Register FIRAuthStateDidChangeListenerHandle.
-        authListener = FIRAuth.auth()?.addStateDidChangeListener({ (auth, user) in
-            if let user = user {
-                let nav = self.storyboard?.instantiateViewController(withIdentifier: "NavChatViewController") as! UINavigationController
-                let chatVC = nav.viewControllers[0] as! ChatViewController
-                chatVC.senderId = user.uid
-                chatVC.senderDisplayName = "iOS"
-                chatVC.avatarString = user.photoURL?.absoluteString ?? "https://lh5.googleusercontent.com/-YpXDnaI_YM0/AAAAAAAAAAI/AAAAAAAAB30/rvs3MJ_YPOE/s96-c/photo.jpg"
-                chatVC.title = "Firebase"
-                let appDelegate = UIApplication.shared.delegate as! AppDelegate
-                appDelegate.window?.rootViewController = nav
-            }
-        })
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
         // TODO: - Unregister FIRAuthStateDidChangeListenerHandle.
-        FIRAuth.auth()?.removeStateDidChangeListener(authListener!)
     }
     
 }
 
 // MARK: - GIDSignInUIDelegate
-extension LoginViewController: GIDSignInUIDelegate {
-    
-}
+// TODO: - Implement empty GIDSignInUIDelegate.

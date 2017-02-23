@@ -31,13 +31,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey : Any]? = nil) -> Bool {
         
-        // TODO: - Setup Firebase core.
         FIRApp.configure()
         FIRDatabase.database().persistenceEnabled = true
         
         // TODO: - Setup GoogleSignIn clientID and delegate.
-        GIDSignIn.sharedInstance().clientID = FIRApp.defaultApp()?.options.clientID
-        GIDSignIn.sharedInstance().delegate = self
         
         UINavigationBar.appearance().tintColor = UIColor.white
         UINavigationBar.appearance().titleTextAttributes = [NSForegroundColorAttributeName : UIColor.white]
@@ -47,31 +44,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool {
         // TODO: - Handle GoogleSignIn callback url.
-        return GIDSignIn.sharedInstance().handle(url,
-                                                 sourceApplication:options[UIApplicationOpenURLOptionsKey.sourceApplication] as? String,
-                                                 annotation: [:])
+        return true
     }
     
 }
+
 // MARK: - GIDSignInDelegate
-extension AppDelegate: GIDSignInDelegate {
-    
-    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
-        // TODO: - Sign in Firebase with Google's idToken and accessToken.
-        if let error = error {
-            print(error.localizedDescription)
-            return
-        }
-        
-        guard let authentication = user.authentication else { return }
-        let credential = FIRGoogleAuthProvider.credential(withIDToken: authentication.idToken,
-                                                          accessToken: authentication.accessToken)
-        
-        FIRAuth.auth()?.signIn(with: credential, completion: { (user: FIRUser?, error: Error?) in
-            if let error = error {
-                print(error.localizedDescription)
-            }
-        })
-    }
-    
-}
+// TODO: - Implement GIDSignInDelegate
